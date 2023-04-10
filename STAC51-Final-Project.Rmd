@@ -1,0 +1,785 @@
+---
+title: "STAC51 Final Project"
+author: "Wenxin Gong, Kuei-Sheng Hou, Can Ming Jiang"
+date: "2023-04-10"
+output:
+  word_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+\begin{center} 
+
+\textbf{Risk Factors that Play Significant Roles in Osteoporotic Fracture} \\
+
+\textbf{Group 7} \\ 
+\end{center} 
+\
+
+\begin{center} 
+\textbf{Background and Significance, Discussion/Conclusion: Wenxin Gong: } \\
+\textbf{Exploratory data analysis: Kuei-Sheng Hou: } \\
+\textbf{Model: Can Ming Jiang} \\
+\end{center} 
+\
+\begin{center}
+\textbf{Word Count:} \\
+\end{center} 
+\
+\begin{center} 
+\textbf{Library Used in Case Study:} \\
+
+library(ggplot2) \\
+library("ggpubr") \\ 
+library(dplyr) \\ 
+library(corrplot) \\
+library(ResourceSelection) \\ 
+library(pROC)\\
+
+
+\end{center}
+
+\pagebreak
+
+# Background and Significance
+
+## Abstact
+
+Osteoporosis affects a significant number of people in the United States, with an estimated 54 million individuals affected. Fractures resulting from this condition are common, with up to one in two women and one in four men over 50 experiencing an osteoporosis-related fracture. This condition weakens bones and increases the risk of fractures in areas such as the spine, hip, wrist, and shoulder. The National Health and Nutrition Examination Survey (NHANES) collects data on risk factors such as age, gender, race, BMI, smoking, and alcohol use to identify underlying health conditions that contribute to osteoporotic fractures. This information is used to develop strategies for prevention and management. This case study uses data from the 2007-2008 NHANES survey, which included 10,149 individuals, to examine risk factors for osteoporotic fractures. 
+
+## Significance of the Case Study
+
+Despite being a national problem, osteoporosis often goes undetected and untreated. While NHANES has always provided many insights into the risk factors for osteoporosis, researchers have not exploited such information to the fullest. The current case study is significant because it ensures maximum data exploitation to identify the population’s underlying risk factors for osteoporotic fracture. The case study is also significant because it looks at the predictors of osteoporotic fracture (i.e., fractures of the hip, wrist, and spine) in men and women and compares the results across different racial groups. This case study also brings to light the bone mineral density (BMD) measures that best predict osteoporotic fractures. The last significance of this case study is that it helps in developing effective strategies to prevent and manage osteoporosis. By examining the risk factors for fracture, including BMD measures after controlling for various non-BMD factors, this case study helps to develop the most effective strategies to prevent osteoporosis and reduce fracture risks. Therefore, by providing comprehensive information on fractures, this study will benefit policymakers, healthcare providers, and individuals in designing preventive strategies to reduce the burden of osteoporotic fractures.
+
+
+
+## Variable description
+
+After cleaning the data, we have 17 variables to create a model
+
+- ALQ130: average number of alcohol drinks/day in the last 12 months (numeric value with a maximum of 95; 777=refused; 999=don’t know; .=missing)
+
+- ALQ140Q: number of days having 5+ drinks in the last 12 months (numeric value with a maximum of 365; 777=refused; 999=don’t know; .=missing)
+
+- BMXBMI: body mass index (numeric value .=missing)
+
+- DBQ229: regular milk use 5 times per week (1=a regular milk drinker for most or all of my life, including childhood; 2=never been a regular milk drinker; 3=milk drinking has varied over my life-sometimes I’ve been a regular milk drinker; 7=refused; 9=don’t know; .=missing)
+
+- DIQ010: doctor told you have diabetes (1=yes; 2=no; 3=borderline; 7=refused; 9=don’t know; .=missing)
+
+- MCQ190: type of arthritis (1=rheumatoid arthritis; 2=osteoarthritis; 3=other arthritis; 7=refused; 9=don’t know; .=missing)
+
+- DXXWDBMD: ward’s triangle BMD (numeric value; .=missing)
+
+- DXXL2BMD: L2 BMD  (numeric value; .=missing)
+
+- RIDAGEYR: age in years (numeric value with a maximum of 80; .=missing)
+
+- WHD020: current self-report weight (pounds) (numeric value; 7777=refused; 9999=don’t know; .=missing)
+
+- MCQ160C: doctor ever said you had coronary heart disease (1=yes; 2=no; 7=refused; 9=don’t know; .=missing)
+
+- MCQ160L: ever told you had any live condition (1=yes; 2=no; 77777=refused; 99999=don’t know; .=missing)
+
+- OSQ130: ever taken prednisone or cortisone nearly every day for a month or longer (1=yes; 2=no; 7=refused; 9=don’t know; .=missing)
+
+- OSQ170: did mother ever fracture a hip (1=yes; 2=no; 7=refused; 9=don’t know; .=missing)
+
+- OSQ200: did father ever fracture a hip (1=yes; 2=no; 7=refused; 9=don’t know; .=missing)
+
+- RIAGENDR: gender (1=male; 2=female; .=missing)
+
+- RIDETH1: race/ethnicity (1=Mexican American; 2=other Hispanic; 3=non-hispanic white; 4=non-hispanic black; 5=other race; .=missing)
+
+
+
+## Data Cleaning
+Remove missing information and inaccurate variables.
+```{r}
+fracture.data = read.csv("Frax_Risk.csv")
+
+D2 <- fracture.data[,!(names(fracture.data) %in% 
+                         c("SEQN", "DBQ197", "DIQ220", "MCQ160A", "MCQ180C", 
+                           "OSQ010A", "OSQ010B", "OSQ010C", "WHD110","MCQ180L", 
+                           "MCQ180A", "MCQ170L", "OSQ040AA", "OSQ040BA",
+                           "OSQ040CA", "OSQ070"))]
+D2 = D2[D2$DXXOFBMD > 0 & D2$DXXNKBMD > 0 & D2$DXXINBMD > 0 & D2$DXXOSBMD > 0 & 
+          D2$DXXTRBMD > 0 & D2$DXXWDBMD > 0 & D2$DXXL1BMD > 0 & D2$DXXL2BMD > 0 & 
+          D2$DXXL3BMD > 0 & D2$DXXL4BMD & D2$OSQ020B < 7777 & D2$ALQ130 < 777 & 
+          D2$WHD020 > 0 & D2$WHD020 < 7777,]
+D2 = D2[D2$RIDAGEYR <= 80 & D2$RIDAGEYR > 0 & D2$BMXBMI > 0,]
+D2[D2$MCQ190 == 0,]$MCQ190 = 9
+D2[D2$OSQ170 == 7,]$OSQ170 = 9
+D2[D2$OSQ200 == 7,]$OSQ200 = 9
+```
+
+\pagebreak
+
+# Exploratory Data Analysis / Data Visualization
+
+```{r echo=FALSE}
+library(ggplot2)
+data.f = D2
+data.f[data.f$Y > 0,]$Y = "Fractured"
+data.f[data.f$Y == 0,]$Y = "No fractured"
+data.f[data.f$RIAGENDR == 1,]$RIAGENDR = "Male"
+data.f[data.f$RIAGENDR == 2,]$RIAGENDR = "Female"
+
+data.f[data.f$RIDRETH1 == 1,]$RIDRETH1 = "Mexican American"
+data.f[data.f$RIDRETH1 == 2,]$RIDRETH1 = "Other Hispanic"
+data.f[data.f$RIDRETH1 == 3,]$RIDRETH1 = "Non-Hispanic white"
+data.f[data.f$RIDRETH1 == 4,]$RIDRETH1 = "Non-Hispanic black"
+data.f[data.f$RIDRETH1 == 5,]$RIDRETH1 = "other race"
+
+data.f[data.f$DBQ229 == 1,]$DBQ229 = "Regular"
+data.f[data.f$DBQ229 == 2,]$DBQ229 = "Not Regular"
+data.f[data.f$DBQ229 == 3,]$DBQ229 = "Was Regular"
+data.f[data.f$DBQ229 == 9,]$DBQ229 = "Not Sure"
+
+data.f[data.f$DIQ010 == 1,]$DIQ010 = "Yes"
+data.f[data.f$DIQ010 == 2,]$DIQ010 = "No"
+data.f[data.f$DIQ010 == 3,]$DIQ010 = "Borderline"
+data.f[data.f$DIQ010 == 9,]$DIQ010 = "Not Sure"
+
+data.f[data.f$MCQ190 == 1,]$MCQ190 = "Rheumatoid Arthritis"
+data.f[data.f$MCQ190 == 2,]$MCQ190 = "Osteoarthritis"
+data.f[data.f$MCQ190 == 3,]$MCQ190 = "other arthritis"
+data.f[data.f$MCQ190 == 9,]$MCQ190 = "Not Sure"
+
+data.f[data.f$MCQ160C == 1,]$MCQ160C = "Yes"
+data.f[data.f$MCQ160C == 2,]$MCQ160C = "No"
+data.f[data.f$MCQ160C == 9,]$MCQ160C = "Not Sure"
+
+data.f[data.f$MCQ160L == 1,]$MCQ160L = "Yes"
+data.f[data.f$MCQ160L == 2,]$MCQ160L = "No"
+data.f[data.f$MCQ160L == 9,]$MCQ160L = "Not Sure"
+
+data.f[data.f$OSQ170 == 1,]$OSQ170 = "Yes"
+data.f[data.f$OSQ170 == 2,]$OSQ170 = "No"
+data.f[data.f$OSQ170 == 9,]$OSQ170 = "Not Sure"
+
+data.f[data.f$OSQ200 == 1,]$OSQ200 = "Yes"
+data.f[data.f$OSQ200 == 2,]$OSQ200 = "No"
+data.f[data.f$OSQ200 == 9,]$OSQ200 = "Not Sure"
+
+data.f[data.f$OSQ130 == 1,]$OSQ130 = "Yes"
+data.f[data.f$OSQ130 == 2,]$OSQ130 = "No"
+data.f[data.f$OSQ130 == 9,]$OSQ130 = "Not Sure"
+
+```
+
+
+
+```{r include=FALSE}
+means <- aggregate(BMXBMI ~  Y, data.f, mean)
+means$BMXBMI = round(means$BMXBMI, 2)
+bmi.gg <- ggplot(data.f, aes(x=Y, y=BMXBMI, color=Y)) +
+  geom_boxplot() +
+  stat_summary(fun=mean, colour="darkred", geom="point", 
+               shape=18, size=3, show.legend=FALSE) + 
+  geom_text(data = means, aes(label = BMXBMI, y = BMXBMI + 2)) +
+  ylab("BMI") +
+  xlab("group") +
+  ggtitle("How does BMI effect on fractured and non-fractured patient?")
+
+```
+
+```{r echo=FALSE}
+
+gender.gg <- ggplot(data.f, aes(x = as.factor(RIAGENDR), fill = Y)) +
+  geom_bar(aes( y=after_stat(count)/tapply(after_stat(count), after_stat(x) ,sum)[after_stat(x)]), position="dodge" ) +
+  geom_text(aes( y=after_stat(count)/tapply(after_stat(count), after_stat(x) ,sum)[after_stat(x)], label=scales::percent(after_stat(count)/tapply(after_stat(count), after_stat(x) ,sum)[after_stat(x)]) ),
+            stat="count", position=position_dodge(0.9), vjust=-0.5)+
+  ylab('Probability %') +
+  scale_y_continuous(labels = scales::percent) +
+  xlab("Gender") + 
+  ggtitle("in the Gender group")
+
+
+```
+
+```{r echo=FALSE}
+race.gg <- ggplot(data.f, aes(x = as.factor(RIDRETH1), fill = Y)) +
+geom_bar(aes( y=after_stat(count)/tapply(after_stat(count), after_stat(x) ,sum)[after_stat(x)]), position="dodge" ) +
+  geom_text(aes( y=after_stat(count)/tapply(after_stat(count), after_stat(x) ,sum)[after_stat(x)], label=scales::percent(after_stat(count)/tapply(after_stat(count), after_stat(x) ,sum)[after_stat(x)]) ),
+            stat="count", position=position_dodge(0.9), vjust=-0.5)+
+  ylab('Probability %') +
+  scale_y_continuous(labels = scales::percent) +
+  xlab("Race") + 
+  ggtitle("in the Race group") + 
+  scale_x_discrete(guide = guide_axis(n.dodge = 2)) +
+  NULL
+
+
+```
+
+```{r echo=FALSE}
+age.gg <- ggplot(data.f, aes(x = as.factor(RIDAGEYR), fill = Y)) +
+  geom_bar(aes( y=after_stat(count)/tapply(after_stat(count), after_stat(x) ,sum)[after_stat(x)]) ) +
+  ylab('Probability %') +
+  scale_y_continuous(labels = scales::percent) +
+  xlab("Age") + 
+  ggtitle("in the Age group")
+  
+```
+
+
+```{r echo=FALSE}
+alchocal.gg <- ggplot(data.f, aes(x = as.factor(ALQ130), fill = Y)) +
+  geom_bar(aes( y=after_stat(count)/tapply(after_stat(count), after_stat(x) ,sum)[after_stat(x)]), position="dodge") +
+  ylab('Probability %') +
+  scale_y_continuous(labels = scales::percent) +
+  xlab("Daily alcohol intake in past year") + 
+  ggtitle("if person drank Alchocal")+ 
+  scale_x_discrete(guide = guide_axis(n.dodge = 2)) +
+  NULL
+
+```
+
+```{r echo=FALSE}
+milk.gg <- ggplot(data.f, aes(x = as.factor(DBQ229), fill = Y)) +
+geom_bar(aes( y=after_stat(count)/tapply(after_stat(count), after_stat(x) ,sum)[after_stat(x)]), position="dodge" ) +
+  geom_text(aes( y=after_stat(count)/tapply(after_stat(count), after_stat(x) ,sum)[after_stat(x)], label=scales::percent(after_stat(count)/tapply(after_stat(count), after_stat(x) ,sum)[after_stat(x)]) ),
+            stat="count", position=position_dodge(0.9), vjust=-0.5)+
+  ylab('Probability %') +
+  scale_y_continuous(labels = scales::percent) +
+  xlab("Regular milk use 5 times per week") + 
+  ggtitle("if the person comsume Milk regularly")
+
+```
+
+```{r echo=FALSE}
+diabetes.gg <- ggplot(data.f, aes(x = as.factor(DIQ010), fill = Y)) +
+geom_bar(aes( y=after_stat(count)/tapply(after_stat(count), after_stat(x) ,sum)[after_stat(x)]), position="dodge" ) +
+  geom_text(aes( y=after_stat(count)/tapply(after_stat(count), after_stat(x) ,sum)[after_stat(x)], label=scales::percent(after_stat(count)/tapply(after_stat(count), after_stat(x) ,sum)[after_stat(x)]) ),
+            stat="count", position=position_dodge(0.9), vjust=-0.5)+
+  ylab('Probability %') +
+  scale_y_continuous(labels = scales::percent) +
+  xlab("Doctor told you have diabetes") + 
+  ggtitle("if the person have diabetes")
+
+
+```
+
+```{r echo=FALSE}
+heart.gg <- ggplot(data.f, aes(x = as.factor(MCQ160C), fill = Y)) +
+geom_bar(aes( y=after_stat(count)/tapply(after_stat(count), after_stat(x) ,sum)[after_stat(x)]), position="dodge" ) +
+  geom_text(aes( y=after_stat(count)/tapply(after_stat(count), after_stat(x) ,sum)[after_stat(x)], label=scales::percent(after_stat(count)/tapply(after_stat(count), after_stat(x) ,sum)[after_stat(x)]) ),
+            stat="count", position=position_dodge(0.9), vjust=-0.5)+
+  ylab('Probability %') +
+  scale_y_continuous(labels = scales::percent) +
+  xlab("Doctor ever said you had coronary heart disease") + 
+  ggtitle("if the person have coronary heart disease")
+
+
+```
+
+
+```{r echo=FALSE}
+liver.gg <- ggplot(data.f, aes(x = as.factor(MCQ160L), fill = Y)) +
+geom_bar(aes( y=after_stat(count)/tapply(after_stat(count), after_stat(x) ,sum)[after_stat(x)]), position="dodge" ) +
+  geom_text(aes( y=after_stat(count)/tapply(after_stat(count), after_stat(x) ,sum)[after_stat(x)], label=scales::percent(after_stat(count)/tapply(after_stat(count), after_stat(x) ,sum)[after_stat(x)]) ),
+            stat="count", position=position_dodge(0.9), vjust=-0.5)+
+  ylab('Probability %') +
+  scale_y_continuous(labels = scales::percent) +
+  xlab("Ever told you had any liver condition") + 
+  ggtitle("if the person have liver condition")
+
+
+```
+
+```{r echo=FALSE}
+mother.gg <- ggplot(data.f, aes(x = as.factor(OSQ170), fill = Y)) +
+geom_bar(aes( y=after_stat(count)/tapply(after_stat(count), after_stat(x) ,sum)[after_stat(x)]), position="dodge" ) +
+  geom_text(aes( y=after_stat(count)/tapply(after_stat(count), after_stat(x) ,sum)[after_stat(x)], label=scales::percent(after_stat(count)/tapply(after_stat(count), after_stat(x) ,sum)[after_stat(x)]) ),
+            stat="count", position=position_dodge(0.9), vjust=-0.5)+
+  ylab('Probability %') +
+  scale_y_continuous(labels = scales::percent) +
+  xlab("Did mother ever fracture a hip") + 
+  ggtitle("if the mother has fracture a hip")
+
+```
+
+```{r echo=FALSE}
+father.gg <- ggplot(data.f, aes(x = as.factor(OSQ200), fill = Y)) +
+geom_bar(aes( y=after_stat(count)/tapply(after_stat(count), after_stat(x) ,sum)[after_stat(x)]), position="dodge" ) +
+  geom_text(aes( y=after_stat(count)/tapply(after_stat(count), after_stat(x) ,sum)[after_stat(x)], label=scales::percent(after_stat(count)/tapply(after_stat(count), after_stat(x) ,sum)[after_stat(x)]) ),
+            stat="count", position=position_dodge(0.9), vjust=-0.5)+
+  ylab('Probability %') +
+  scale_y_continuous(labels = scales::percent) +
+  xlab("Did father ever fracture a hip") + 
+  ggtitle("if the father has fracture a hip")
+
+```
+
+
+```{r echo=FALSE}
+pc.gg <- ggplot(data.f, aes(x = as.factor(OSQ130), fill = Y)) +
+geom_bar(aes( y=after_stat(count)/tapply(after_stat(count), after_stat(x) ,sum)[after_stat(x)]), position="dodge" ) +
+  geom_text(aes( y=after_stat(count)/tapply(after_stat(count), after_stat(x) ,sum)[after_stat(x)], label=scales::percent(after_stat(count)/tapply(after_stat(count), after_stat(x) ,sum)[after_stat(x)]) ),
+            stat="count", position=position_dodge(0.9), vjust=-0.5)+
+  ylab('Probability %') +
+  scale_y_continuous(labels = scales::percent) +
+  xlab("Long-term prednisone or cortisone use?") + 
+  ggtitle("if used prednisone\\cortisone")
+
+```
+
+
+```{r echo=FALSE}
+arthritis.gg <- ggplot(data.f, aes(x = as.factor(MCQ190), fill = Y)) +
+geom_bar(aes( y=after_stat(count)/tapply(after_stat(count), after_stat(x) ,sum)[after_stat(x)]), position="dodge" ) +
+  geom_text(aes( y=after_stat(count)/tapply(after_stat(count), after_stat(x) ,sum)[after_stat(x)], label=scales::percent(after_stat(count)/tapply(after_stat(count), after_stat(x) ,sum)[after_stat(x)]) ),
+            stat="count", position=position_dodge(0.9), vjust=-0.5)+
+  ylab('Probability %') +
+  scale_y_continuous(labels = scales::percent) +
+  xlab("Type of arthritis") + 
+  ggtitle("if the person have arthritis")+ 
+  scale_x_discrete(guide = guide_axis(n.dodge = 2)) +
+  NULL
+
+```
+
+## Categorical Variables that were used in the final model
+
+## What are the probability of getting fractured:
+```{r echo=FALSE, out.width = '70%',fig.align="center"}
+library(ggplot2)
+library("ggpubr")
+ggarrange(
+  gender.gg, father.gg,
+  common.legend = TRUE, legend = "bottom",
+  ncol = 2
+  )
+```
+
+- In gender, male has a higher probability of getting fractured.
+- From the graph, there is no clear evident that if the father has ever fractured a hip impacts the person, however, it it significant in the model. Interestingly, if the mother has ever fractured a hip is also a variable in the data set but it is not as significate compare to the father. 
+
+## What are the probability of getting fractured:
+```{r echo=FALSE, out.width = '70%',fig.align="center"}
+library(ggplot2)
+library("ggpubr")
+ggarrange(
+  arthritis.gg, pc.gg,
+  common.legend = TRUE, legend = "bottom",
+  ncol = 2
+  )
+```
+
+- From the graph, Osteoarthritis and other type of arthritis has higher probability of getting fractured.
+- Taking Prednisone or Cortisone long-term increase the probability of getting fractured.
+
+## What are the probability of getting fractured:
+```{r echo=FALSE, out.width = '70%',fig.align="center"}
+library(ggplot2)
+library("ggpubr")
+ggarrange(
+  race.gg, alchocal.gg,
+  common.legend = TRUE, legend = "bottom",
+  ncol = 2
+  )
+```
+
+- From the graph, non-Hispanic while has higher probability of getting fractured.
+- Also, if the amount of daily alcohol drinks is high, it would also increase the probability of getting fractured 
+
+## Check for MultiCollinearity
+```{r echo=FALSE, fig.align="center", message=FALSE, warning=FALSE, out.width='65%'}
+library(dplyr)
+numeric.data = select(D2, ALQ130, ALQ140Q, BMXBMI, DXXOFBMD, DXXNKBMD, DXXTRBMD, DXXINBMD, DXXWDBMD, DXXL1BMD, DXXL2BMD, DXXL3BMD, DXXL4BMD, DXXOSBMD, RIDAGEYR, WHD020)
+
+library(corrplot)
+corrplot(cor(numeric.data))
+```
+
+From the correlation plot, we can see that there are high correlation between DXXOFBMD, DXXNKBMD, DXXTRBMD, DXXINBMD and high correlation between DXXL1BMD, DXXL2BMD, DXXL3BMD, DXXL4BMD. We will select the variables in the Model Selection section.
+
+
+\pagebreak
+
+# Model Selection and Diagnosis
+
+NOTE: model selection on report is done on testing data set, while results
+provided during presentation used full data set, So, some values may vary.
+
+Cleaning The Data Set
+```{r include=FALSE}
+fracture.data = read.csv("Frax_Risk.csv")
+
+D2 <- fracture.data[,!(names(fracture.data) %in% c("SEQN", "DBQ197", "DIQ220", "DIQ220",
+                                                   "MCQ160A", "MCQ180C",  "WHD110", "MCQ180L", 
+                                                   "MCQ180A", "MCQ170L", "OSQ040AA", "OSQ040BA",
+                                                   "OSQ040CA", "OSQ070"))]
+
+D2 = D2[D2$DXXOFBMD > 0 & D2$DXXNKBMD > 0 & D2$DXXINBMD > 0 & D2$DXXOSBMD > 0
+        & D2$DXXTRBMD > 0 & D2$DXXWDBMD > 0 & D2$DXXL1BMD > 0 & D2$DXXL2BMD > 0
+        & D2$DXXL3BMD > 0 & D2$DXXL4BMD & D2$OSQ020B < 7777 & D2$ALQ130 < 777 
+        & D2$WHD020 > 0 & D2$WHD020 < 7777,]
+
+D2 = D2[D2$RIDAGEYR <= 80 & D2$RIDAGEYR > 0 & D2$BMXBMI > 0 & D2$OSQ010A<7
+        &D2$OSQ010B<7&D2$OSQ010C<7,]
+
+D2[D2$MCQ190 == 0,]$MCQ190 = 9
+D2[D2$OSQ170 == 7,]$OSQ170 = 9
+D2[D2$OSQ200 == 7,]$OSQ200 = 9
+
+#dividing the data set by gender
+Dm=D2[D2$RIAGENDR<2,]#data for males
+Df=D2[D2$RIAGENDR==2,]#data for females
+
+```
+After cleaning the data we have 17 variables to create a model. (ALQ130, ALQ140Q, BMXBMI, DXXWDBMD, DXXL2BMD,
+RIDAGEYR, WHD020, DBQ229, DIQ010, MCQ190, MCQ160C, MCQ160L, OSQ130, OSQ170, OSQ200, RIAGENDR, RIDETH1)  
+              
+When fitting the model using the number of fractures(spine, hip, wrist), We initially used a poisson regression
+to model the data.However, we had issues creating a model that decreased the AIC. When examining the data
+one possible reason why the poisson regression did not work was that in the data set, there
+was no way to differentiate between 0 fractures or missing information.
+So, we switched over to using fracture or not as our response variable and 
+applying a logistic regression. 
+We also split the data set into two part one for training the model and one for testing the model.
+We decided on a 70 - 30 split between training and testing set.
+
+```{r include=FALSE}
+fracture.y = 0
+fracture.n=0
+
+fracture.y.m = 0
+fracture.n.m = 0
+
+fracture.y.f = 0
+fracture.n.f = 0
+
+fracture.y.hip = 0
+fracture.n.hip = 0
+
+#this is for success and failure for logistic regression, full data set
+for ( i in 1:length(D2$OSQ010A))
+{
+    if(D2$OSQ010A[i] == 1 |D2$OSQ010B[i] == 1 |D2$OSQ010C[i] == 1 )
+    {
+        fracture.y[i] = 1
+        fracture.n[i] = 0
+        
+        fracture.y.hip[i] = 1
+        fracture.n.hip[i] = 0
+        
+    }
+    if(D2$OSQ010A[i] == 2 & D2$OSQ010B[i] == 2 & D2$OSQ010C[i] == 2 )
+    {
+        fracture.y[i] = 0
+        fracture.n[i] = 1
+        
+        fracture.y.hip[i] = 0
+        fracture.n.hip[i] = 1
+       
+    }
+}
+
+#this is for success and failure for logistic regression, male data
+
+for ( i in 1:length(Dm$OSQ010A))
+{
+    if(Dm$OSQ010A[i] == 1 |Dm$OSQ010B[i] == 1 |Dm$OSQ010C[i] == 1 )
+    {
+       
+        fracture.y.m[i] = 1
+        fracture.n.m[i] = 0
+        
+    }
+    if(Dm$OSQ010A[i] == 2 & Dm$OSQ010B[i] == 2 & Dm$OSQ010C[i] == 2 )
+    {
+       
+        fracture.y.m[i] = 0
+        fracture.n.m[i] = 1
+        
+    }
+}
+
+#this is for success and failure for logistic regression, female data
+for ( i in 1:length(Df$OSQ010A))
+{
+    if(Df$OSQ010A[i] == 1 |Df$OSQ010B[i] == 1 |Df$OSQ010C[i] == 1 )
+    {
+       
+        fracture.y.f[i] = 1
+        fracture.n.f[i] = 0
+        
+    }
+    if(Df$OSQ010A[i] == 2 & Df$OSQ010B[i] == 2 & Df$OSQ010C[i] == 2 )
+    {
+       
+        fracture.y.f[i] = 0
+        fracture.n.f[i] = 1
+        
+    }
+}
+
+fracture.hip = cbind(fracture.y.hip, fracture.n.hip)#hip fracture or not, full data 
+fracture.m = cbind(fracture.y.m, fracture.n.m)#fracture or not for male data 
+fracture.f = cbind(fracture.y.f, fracture.n.f)#fracture or not for female data
+```
+
+```{r include=TRUE}
+#Spliting data set into training(70% of data) and testing(30% of data)
+set.seed(1234)
+D2=cbind(fracture.y,fracture.n,D2)
+sample=D2[sample(1:nrow(D2),nrow(D2)),]
+training = sample[1:floor(0.7*nrow(D2)),]
+testing = sample[(floor(0.7*nrow(D2))+1):nrow(D2),]
+```
+
+
+The variables DXXOFBMD, DXXNKBMD,DXXTRBMD,DXXINBMD,DXXWDBMD are highly correlated
+so it is sufficient to choose one when constructing the model, we will choose the 
+one with the lowest AIC, in the single predictor models.
+
+```{r include=TRUE}
+fit.4 = glm(cbind(fracture.y,fracture.n)~DXXOFBMD,family=binomial,data=training)#AIC = 3722.2
+fit.5 = glm(cbind(fracture.y,fracture.n)~DXXNKBMD,family=binomial,data=training)#AIC = 3709.3
+fit.6 = glm(cbind(fracture.y,fracture.n)~DXXTRBMD,family=binomial,data=training)#AIC = 3721.5
+fit.7 = glm(cbind(fracture.y,fracture.n)~DXXINBMD,family=binomial,data=training)#AIC = 3724.6
+fit.8 = glm(cbind(fracture.y,fracture.n)~DXXWDBMD,family=binomial,data=training)#AIC = 3688.1
+```
+We choose to keep DXXWDBMD in the model since it has lowest AIC
+
+Similarly we apply the same to the variables DXXL1BMD,DXXL2BMD,DXXL3BMD,DXXL4BMD,DXXOSBMD
+```{r include=TRUE}
+fit.9 = glm(cbind(fracture.y,fracture.n)~DXXL1BMD,family=binomial,data=training) #AIC = 3722.5
+fit.10 = glm(cbind(fracture.y,fracture.n)~DXXL2BMD,family=binomial,data=training)#AIC = 3716.1
+fit.11 = glm(cbind(fracture.y,fracture.n)~DXXL3BMD,family=binomial,data=training)#AIC = 3717.5
+fit.12 = glm(cbind(fracture.y,fracture.n)~DXXL4BMD,family=binomial,data=training)#AIC = 3717.9
+fit.13 = glm(cbind(fracture.y,fracture.n)~DXXOSBMD,family=binomial,data=training)#AIC = 3715.9
+```
+We choose to keep DXXOSBMD in the model since it has the lowest AIC  
+
+
+Due to the large number of variables we had to form the model, we were unable to form the saturated model
+and run it through the automated model selection processes.
+Therefore, we decided to first the model without interaction terms, then later add in interaction
+terms by hand, choosing the model which reduced AIC.  
+
+
+
+Now we will form the model without interaction terms
+```{r include=FALSE}
+fit.forward = step(glm(cbind(fracture.y,fracture.n)~1,family=binomial(link="logit"),data=training), 
+     scope = ~ ALQ130 + ALQ140Q + BMXBMI + DXXWDBMD + DXXOSBMD + RIDAGEYR + WHD020 + as.factor(DBQ229) 
+              + as.factor(DIQ010) + as.factor(MCQ190) + as.factor(MCQ160C) + as.factor(MCQ160L) 
+              + as.factor(OSQ130) + as.factor(OSQ170) + as.factor(OSQ200) +
+              as.factor(RIAGENDR) + as.factor(RIDRETH1)
+     ,direction="forward",test = "Chisq") 
+```
+output for forward  
+Step:  AIC=3566.46
+cbind(fracture.y, fracture.n) ~ as.factor(RIDRETH1) + DXXWDBMD + as.factor(RIAGENDR) 
+                                + as.factor(OSQ200) + as.factor(OSQ130) + DXXOSBMD 
+                                + as.factor(MCQ190) + ALQ130 + WHD020  
+
+
+```{r include=FALSE}
+fit.stepwise = step(glm(cbind(fracture.y,fracture.n)~1,family=binomial(link="logit"),data=training), 
+     scope = ~ ALQ130 + ALQ140Q + BMXBMI + DXXWDBMD + DXXOSBMD + RIDAGEYR + WHD020 + as.factor(DBQ229) 
+              + as.factor(DIQ010) + as.factor(MCQ190) + as.factor(MCQ160C) + as.factor(MCQ160L) 
+              + as.factor(OSQ130) + as.factor(OSQ170) + as.factor(OSQ200) +
+              as.factor(RIAGENDR) + as.factor(RIDRETH1)
+     ,direction="both",test = "Chisq") 
+```
+output for stepwise   
+Step:  AIC=3566.46
+cbind(fracture.y, fracture.n) ~ as.factor(RIDRETH1) + DXXWDBMD + as.factor(RIAGENDR) 
+                                + as.factor(OSQ200) + as.factor(OSQ130) + DXXOSBMD 
+                                + as.factor(MCQ190) + ALQ130 + WHD020  
+    
+```{r include=FALSE}
+fit.backward = step(glm(cbind(fracture.y,fracture.n)~ALQ130 + ALQ140Q + BMXBMI + DXXWDBMD + DXXOSBMD +
+              RIDAGEYR + WHD020 + as.factor(DBQ229) + as.factor(DIQ010) + as.factor(MCQ190) +
+              as.factor(MCQ160C) + as.factor(MCQ160L) + as.factor(OSQ130) + as.factor(OSQ170) + as.factor(OSQ200) +
+              as.factor(RIAGENDR) + as.factor(RIDRETH1),family=binomial(link="logit"),data=training) 
+     ,direction="backward",test = "Chisq") 
+```
+Output for backward  
+Step:  AIC=3566.46
+cbind(fracture.y, fracture.n) ~ ALQ130 + DXXWDBMD + DXXOSBMD + WHD020 + as.factor(MCQ190) 
+                                + as.factor(OSQ130) + as.factor(OSQ200) + as.factor(RIAGENDR) 
+                                + as.factor(RIDRETH1)  
+    
+The methods forward, backward, stepwise of automated model selection all gave the same results.  
+
+
+Note, that since we did not want our model to be flooded with too many interaction 
+terms, we made sure to limit the number of interaction terms during manual model
+selection.  
+
+
+After adding interaction terms by hand, AIC of our training model = 3559.3 and our model is  
+cbind(fracture.y,fracture.n)~as.factor(RIDRETH1) + DXXWDBMD + as.factor(OSQ130)
+                                        + as.factor(RIAGENDR) + DXXOSBMD+ RIDAGEYR 
+                                        + as.factor(RIAGENDR):as.factor(RIDRETH1)
+                                        +DXXWDBMD:DXXOSBMD +ALQ130 +ALQ130:DXXOSBMD 
+                                        +RIDAGEYR:as.factor(RIAGENDR)
+```{r include=FALSE}
+#Forming the training model
+train = glm(cbind(fracture.y,fracture.n)~as.factor(RIDRETH1) + DXXWDBMD + as.factor(OSQ130)
+                                        + as.factor(RIAGENDR) + DXXOSBMD+ RIDAGEYR 
+                                        + as.factor(RIAGENDR):as.factor(RIDRETH1)
+                                        +DXXWDBMD:DXXOSBMD +ALQ130 +ALQ130:DXXOSBMD 
+                                        +RIDAGEYR:as.factor(RIAGENDR)
+                                        ,family=binomial(link="logit"),data=training)
+
+#The corresponding model
+test = glm(cbind(fracture.y,fracture.n)~as.factor(RIDRETH1) + DXXWDBMD + as.factor(OSQ130)
+                                        + as.factor(RIAGENDR) + DXXOSBMD+ RIDAGEYR 
+                                        + as.factor(RIAGENDR):as.factor(RIDRETH1)
+                                        +DXXWDBMD:DXXOSBMD +ALQ130 +ALQ130:DXXOSBMD 
+                                        +RIDAGEYR:as.factor(RIAGENDR)
+                                        ,family=binomial(link="logit"),data=testing)
+
+```
+
+comparing training model with model without interaction terms
+```{r include=TRUE}
+anova(fit.forward,train,test="Chisq")
+```
+The p-value is less than 0.05, so the simplier model does not fit the 
+data as well as the more complex model, So, our training model is superior
+to the on without interaction terms.
+
+```{r include=TRUE}
+drop1(train, test="Chisq")
+```
+Notice that all of the terms in our training model are significant. Also, by
+applying the Wald test from the summary() output, we also see that we are
+unable to drop any terms from our model.
+
+```{r include=TRUE}
+library(ResourceSelection)
+hoslem.test(train$y, fitted(train),g=21)#for training data
+hoslem.test(test$y, fitted(test),g=21)#for testing data
+```
+When applying the Hosmer and Lemeshow goodness of fit test(because we have ungrouped data),
+we get that our model fits the data well since the p-value > 0.05.
+
+
+```{r include=TRUE}
+library(pROC)
+par(mfrow=c(2,2))
+test.roc = roc(train$y~fitted(train),plot=TRUE,print.auc=TRUE)#for training data
+title("Training Data")
+test.roc = roc(test$y~fitted(test),plot=TRUE,print.auc=TRUE)#for testing data
+title("Testing Data")
+```
+Classification Table
+```{r echo=FALSE}
+n.train= dim(training)[1]
+prop.train = sum(training$fracture.y==1)/n.train
+y.train = (training$fracture.y==1)*1
+predicted.train = as.numeric(fitted(train)>prop.train)
+table.train = xtabs (~y.train+predicted.train)
+table.train
+sensitivity.train = table.train[1,1]/(table.train[1,1] + table.train[1,2])
+specificity.train = table.train[2,2]/(table.train[2,1] + table.train[2,2])
+
+
+n.test= dim(testing)[1]
+prop.test = sum(testing$fracture.y==1)/n.test
+y.test = (testing$fracture.y==1)*1
+predicted.test = as.numeric(fitted(test)>prop.test)
+table.test = xtabs (~y.test+predicted.test)
+table.test
+sensitivity.test = table.test[1,1]/(table.test[1,1] + table.test[1,2])
+specificity.test = table.test[2,2]/(table.test[2,1] + table.test[2,2])
+class.table = cbind(c(sensitivity.train,specificity.train), c(sensitivity.test,specificity.test))
+dimnames(class.table) = list(result=c("sensitivity", "specificity"), data=c("training","testing"))
+class.table
+
+```
+We note that ideally we would like the area under our ROC curve as well as sensitivity and specificity 
+to be higher however, rather than fitting a model with many terms, we decided to balance
+fitting a model that fits the data well and is useful as well as trying to minimize the number of parameters.
+
+Perform Residual Analysis to check for outliers
+
+```{r echo=FALSE}
+residual.train = rstandard(train,type="deviance")
+residual.test = rstandard(test,type="deviance")
+par(mfrow=c(1,2))
+plot(fitted(train),residual.train,xlab="fitted values",ylab="standardized deviance residuals",ylim=c(-3,3))
+abline(h=3)
+title("Training Data")
+plot(fitted(test),residual.test,xlab="fitted values",ylab="standardized deviance residuals",ylim=c(-3,3))
+abline(h=3)
+title("Testing Data")
+```
+
+Notice, that we have fitted values with residuals that have absolute values of less than 3
+so, there is no evidence of outliers for both training and testing data sets.
+
+Now for the other objectives, we will simply fit the model without interaction terms
+to get a general idea of which predictors are significant.
+
+No interaction model for male data
+```{r include=FALSE}
+fit.male = step(glm(fracture.m ~1,family=binomial,data=Dm), 
+     scope= ~ ALQ130 + ALQ140Q + BMXBMI + DXXWDBMD + DXXOSBMD +
+              RIDAGEYR + WHD020 + as.factor(DBQ229) + as.factor(DIQ010) + as.factor(MCQ190) +
+              as.factor(MCQ160C) + as.factor(MCQ160L) + as.factor(OSQ130) + as.factor(OSQ170) + as.factor(OSQ200) +
+              as.factor(RIDRETH1)
+     ,direction="both",test = "Chisq") 
+```
+It gives the following output
+Step:  AIC=2793.37
+fracture.m ~ as.factor(RIDRETH1) + DXXOSBMD + as.factor(OSQ200) + 
+            WHD020 + as.factor(OSQ130) + as.factor(DIQ010) + as.factor(MCQ160C) + 
+            ALQ130 + as.factor(MCQ190)
+
+
+
+No interaction model for female data
+```{r include=FALSE}
+fit.female = step(glm(fracture.f ~1,family=binomial,data=Df), 
+     scope= ~ ALQ130 + ALQ140Q + BMXBMI + DXXWDBMD + DXXOSBMD +
+              RIDAGEYR + WHD020 + as.factor(DBQ229) + as.factor(DIQ010) + as.factor(MCQ190) +
+              as.factor(MCQ160C) + as.factor(MCQ160L) + as.factor(OSQ130) + as.factor(OSQ170) 
+              + as.factor(OSQ200) + as.factor(RIDRETH1)
+              ,direction="both",test = "Chisq") 
+```
+It gives the following output
+Step:  AIC=2204.09
+fracture.f ~ DXXWDBMD + as.factor(RIDRETH1) + as.factor(MCQ190) + 
+             as.factor(OSQ130) + ALQ140Q + as.factor(DBQ229) + DXXOSBMD + 
+             as.factor(MCQ160C) + as.factor(OSQ200)
+
+
+No interaction model for hip fracture or not
+```{r include=FALSE}
+fit.hip = step(glm(fracture.hip ~1,family=binomial,data=D2), 
+     scope= ~ ALQ130 + ALQ140Q + BMXBMI + DXXWDBMD + DXXOSBMD +
+              RIDAGEYR + WHD020 + as.factor(DBQ229) + as.factor(DIQ010) + as.factor(MCQ190) +
+              as.factor(MCQ160C) + as.factor(MCQ160L) + as.factor(OSQ130) + as.factor(OSQ170)
+              + as.factor(OSQ200) + as.factor(RIAGENDR) + as.factor(RIDRETH1)
+              ,direction="both",test = "Chisq")
+```
+It gives the following output
+Step:  AIC=5044.71
+fracture.hip ~ as.factor(RIDRETH1) + DXXWDBMD + as.factor(RIAGENDR) + 
+               as.factor(OSQ200) + as.factor(MCQ190) + DXXOSBMD + as.factor(OSQ130) + 
+               ALQ130 + WHD020 + RIDAGEYR
+
+\pagebreak
+
+# Discussion/Conclusion
+Our research question is to determine what are the risk factors for osteoporotic fracture. The primary objective of this case study was to identify predictors of osteoporotic fracture in men and women, focusing on fractures of the hip, wrist, and spine. The secondary objectives aimed at determining the best bone mineral density (BMD) measure(s) as a predictor of osteoporotic and hip fractures after controlling for various non-BMD risk factors. Our analysis revealed several significant predictors of osteoporotic fracture: ethnicity, spine BMD, ward’s triangle BMD, gender, age and alcohol consumption. The interaction terms in the model, such as as.factor(RIAGENDR):as.factor(RIDRETH1), DXXWDBMD:DXXOSBMD, ALQ130:DXXOSBMD, and RIDAGEYR:as.factor(RIAGENDR), also indicate that the relationships between these factors and the risk of osteoporotic fracture are more complex and may depend on combinations of these factors. To be more specific, the results of the models without interaction terms showed that the significant predictors for men included ethnicity, spine BMD, family history of hip fracture, weight, prednisone or cortisone taken, history of diabetes, history of coronary heart disease, alcohol consumption and type of arthritis. For women, the significant predictors were ward’s triangle BMD, ethnicity, type of arthritis, prednisone or cortisone taken, alcohol consumption, milk consumption, spine BMD, history of coronary heart disease and family history of hip fracture. For the secondary objectives, our analysis found that both ward’s triangle BMD and spine BMD are important predictors of hip fracture risk when controlling for non-BMD factors. However, BMD measurements for predicting osteoporotic fracture need to be discussed in terms of gender differences. For men, spine BMD appears to be the best predictor, while for women, both ward’s triangle BMD and spine BMD are important predictors.
+Overall, our findings suggest that a combination of demographic, lifestyle, and BMD-related factors can be used to predict the risk of osteoporotic fracture in men and women. These results can be used to identify individuals at high risk for osteoporotic fracture and to develop targeted prevention strategies. However, it is important to note that this study has several limitations. First, the data set used in this study was limited to a specific population and may not be generalizable to other populations. Second, the adaptation study relied on self-reported data, which may be subject to recall bias. Third, there may be other factors for inclusion in this analysis. Future research could build on this study by examining other risk factors for osteoporotic fracture and further exploring the relationship between BMD measurements and fracture. In addition, effective interventions for people at risk for osteoporotic fractures could be further investigated.
+
+\pagebreak
+
+# Reference
+National Osteoporosis Foundation. (n.d.). Osteoporosis fast facts. Retrieved March 29, 2023, from http://www.bonehealthandosteoporosis.org/wp-content/uploads/2015/12/Osteoporosis-Fast-Facts.pdf
+
+Centers for Disease Control and Prevention. (n.d.). Nhanes 2007-2008: Osteoporosis Data Documentation, codebook, and frequencies. Centers for Disease Control and Prevention. Retrieved April 9, 2023, from https://wwwn.cdc.gov/Nchs/Nhanes/2007-2008/OSQ_E.htm
